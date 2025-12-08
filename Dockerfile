@@ -31,4 +31,6 @@ USER runner
 
 COPY start.sh /home/runner/start.sh
 
+RUN chmod +x /home/runner/start.sh
+
 CMD ["/home/runner/start.sh"]
