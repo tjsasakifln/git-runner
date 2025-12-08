@@ -14,6 +14,10 @@ RUN apt-get update && apt-get install -y \
     wget \
     unzip \
     ca-certificates \
+    libicu70 \
+    liblttng-ust1 \
+    libkrb5-3 \
+    zlib1g \
     && rm -rf /var/lib/apt/lists/*
 
 RUN useradd -m -s /bin/bash runner
