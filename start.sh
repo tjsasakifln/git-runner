@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# Runner em nível de conta (serve todos os repos)
+# Runner para repositório específico
 ./config.sh \
-    --url "https://github.com/${GITHUB_OWNER}" \
+    --url "https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}" \
     --token "${GITHUB_TOKEN}" \
     --name "${RUNNER_NAME:-railway-runner}" \
     --work "_work" \
