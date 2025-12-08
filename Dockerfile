@@ -27,10 +27,10 @@ RUN curl -o actions-runner-linux-x64-${RUNNER_VERSION}.tar.gz -L \
     && rm actions-runner-linux-x64-${RUNNER_VERSION}.tar.gz \
     && chown -R runner:runner /home/runner
 
-USER runner
-
 COPY start.sh /home/runner/start.sh
 
-RUN chmod +x /home/runner/start.sh
+RUN chmod +x /home/runner/start.sh && chown runner:runner /home/runner/start.sh
+
+USER runner
 
 CMD ["/home/runner/start.sh"]
