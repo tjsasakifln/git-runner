@@ -40,7 +40,6 @@ jobs:
               with open(path, encoding='utf-8') as f:
                   rows.extend(json.load(f))
 
-          # Corrige uma falha de digitação detectada na transferência manual do lote 4.
           bad = 'https://drive.google.com/file/d/1pbHvDIEz6WXkZK4dqOeSN4JlP_ZCAB3H5/view?usp=drive_link'
           good = 'https://drive.google.com/file/d/1pbHvDIEz6WXkZ4dqOeSN4JlP_ZCAB3H5/view?usp=drive_link'
           for row in rows:
@@ -55,15 +54,12 @@ jobs:
           expected_hash = '82f406fd000c6e6d565ec1fd0d05f9c2ffa0580ef7f74e9389838bc65a476d85'
           assert actual_hash == expected_hash, (actual_hash, expected_hash)
 
-          payload = {
+          Path('tools/n8n_templates_input.json').write_text(json.dumps({
               'source': 'n8n Templates.xlsx',
               'row_count': len(rows),
               'drive_url_count': url_count,
               'rows': rows,
-          }
-          Path('tools/n8n_templates_input.json').write_text(
-              json.dumps(payload, ensure_ascii=False, indent=2), encoding='utf-8'
-          )
+          }, ensure_ascii=False, indent=2), encoding='utf-8')
           print(f'Índice validado: {len(rows)} registros, {url_count} links, SHA-256 {actual_hash}')
           PY
 
@@ -73,7 +69,9 @@ jobs:
           sed -i 's/max_workers=5/max_workers=20/' tools/build_n8n_json_zip.py
 
       - name: Download, validate and package workflows
-        run: python tools/build_n8n_json_zip.py
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python tools/build_n8n_json_zip_fast.py
 
       - name: Verify ZIP
         run: |
