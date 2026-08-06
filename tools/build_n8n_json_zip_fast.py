@@ -4,7 +4,6 @@ from __future__ import annotations
 import importlib.util
 import json
 import os
-import sys
 import urllib.parse
 import urllib.request
 from pathlib import Path
@@ -19,7 +18,7 @@ SPEC.loader.exec_module(builder)
 
 REPO = "nusquama/n8nworkflows.xyz"
 REF = "main"
-TREE_URL = f"https://api.github.com/repos/{REPO}/git/trees/{REF}?recursive=1"
+API_ROOT = f"https://api.github.com/repos/{REPO}/git/trees"
 _tree: dict[str, list[dict[str, Any]]] | None = None
 
 
@@ -41,23 +40,32 @@ def load_tree() -> dict[str, list[dict[str, Any]]]:
     global _tree
     if _tree is not None:
         return _tree
-    payload = json.loads(request_bytes(TREE_URL, api=True, timeout=300))
+
+    root = json.loads(request_bytes(f"{API_ROOT}/{REF}", api=True, timeout=180))
+    workflows = next(
+        (item for item in root.get("tree", []) if item.get("path") == "workflows" and item.get("type") == "tree"),
+        None,
+    )
+    if workflows is None:
+        raise RuntimeError("Diretório workflows não encontrado no arquivo público")
+
+    payload = json.loads(request_bytes(f"{API_ROOT}/{workflows['sha']}", api=True, timeout=300))
     if payload.get("truncated"):
-        raise RuntimeError("A árvore GitHub foi truncada")
+        raise RuntimeError("A listagem direta de workflows foi truncada")
+
     folders: dict[str, list[dict[str, Any]]] = {}
     for item in payload.get("tree", []):
-        path = item.get("path") or ""
-        parts = path.split("/")
-        if len(parts) != 3 or parts[0] != "workflows" or item.get("type") != "blob":
+        folder = item.get("path") or ""
+        if item.get("type") != "tree" or not folder:
             continue
-        folder, filename = parts[1], parts[2]
-        low = filename.lower()
-        if not low.endswith(".json") or "metadata" in low or "metada" in low:
-            continue
-        folders.setdefault(folder, []).append(item)
+        folders[folder] = [{
+            "path": f"workflows/{folder}/workflow.json",
+            "size": 0,
+        }]
+
     if not folders:
-        raise RuntimeError("Nenhum workflow foi encontrado na árvore pública")
-    print(f"Árvore pública carregada: {len(folders)} pastas de workflows", flush=True)
+        raise RuntimeError("Nenhuma pasta de workflow foi encontrada")
+    print(f"Índice público carregado: {len(folders)} pastas de workflows", flush=True)
     _tree = folders
     return folders
 
@@ -72,15 +80,13 @@ def fast_mirror_folders(_mirror: Path) -> list[str]:
 
 
 def fast_fetch_mirror_json(_mirror: Path, folder: str) -> tuple[bytes | None, str | None]:
-    candidates = load_tree().get(folder) or []
-    if not candidates:
-        return None, "nenhum JSON de workflow no diretório"
-    item = max(candidates, key=lambda x: int(x.get("size") or 0))
-    filename = item["path"].split("/")[-1]
-    quoted_path = urllib.parse.quote(item["path"], safe="/")
+    if folder not in load_tree():
+        return None, "pasta não encontrada"
+    path = f"workflows/{folder}/workflow.json"
+    quoted_path = urllib.parse.quote(path, safe="/")
     url = f"https://raw.githubusercontent.com/{REPO}/{REF}/{quoted_path}"
     try:
-        return request_bytes(url, timeout=180), filename
+        return request_bytes(url, timeout=180), "workflow.json"
     except Exception as exc:
         return None, f"{type(exc).__name__}: {exc}"
 
