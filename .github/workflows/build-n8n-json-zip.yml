@@ -41,7 +41,7 @@ jobs:
                   rows.extend(json.load(f))
 
           bad = 'https://drive.google.com/file/d/1pbHvDIEz6WXkZK4dqOeSN4JlP_ZCAB3H5/view?usp=drive_link'
-          good = 'https://drive.google.com/file/d/1pbHvDIEz6WXkZ4dqOeSN4JlP_ZCAB3H5/view?usp=drive_link'
+          good = 'https://drive.google.com/file/d/1pbHvDIEz6WXkZK4dqOeSN4JlP_ZCAB3H5/view?usp=drive_link'
           for row in rows:
               row['template_urls'] = [good if url == bad else url for url in row.get('template_urls', [])]
 
@@ -84,17 +84,28 @@ jobs:
           assert path.exists() and path.stat().st_size > 0
           with zipfile.ZipFile(path) as zf:
               assert zf.testzip() is None
-              names = zf.namelist()
-              assert 'manifest.json' in names
               manifest = json.loads(zf.read('manifest.json'))
               valid = [m for m in manifest if m.get('json_file')]
               print(f'ZIP íntegro: {len(valid)} arquivos JSON para {len(manifest)} links auditados')
           PY
+
+      - name: Package exact archive inventory
+        run: |
+          cd tools/_work/exact-archive
+          zip -qr ../../exact-archive-json.zip oleg-browser/json oleg-browser/data/n8n-templates_enriched.csv
 
       - name: Upload result
         uses: actions/upload-artifact@v4
         with:
           name: n8n-json-listados
           path: tools/n8n-json-listados.zip
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Upload exact archive inventory
+        uses: actions/upload-artifact@v4
+        with:
+          name: exact-archive-json
+          path: tools/exact-archive-json.zip
           if-no-files-found: error
           retention-days: 1
