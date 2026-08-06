@@ -67,6 +67,11 @@ jobs:
           print(f'Índice validado: {len(rows)} registros, {url_count} links, SHA-256 {actual_hash}')
           PY
 
+      - name: Tune network pass
+        run: |
+          sed -i 's/range(1, 4)/range(1, 2)/' tools/build_n8n_json_zip.py
+          sed -i 's/max_workers=5/max_workers=20/' tools/build_n8n_json_zip.py
+
       - name: Download, validate and package workflows
         run: python tools/build_n8n_json_zip.py
 
